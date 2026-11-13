@@ -6,6 +6,7 @@
 (function () {
   const R = window.RUTINA;
   const DB = window.DB;
+  const P = window.PROGRESION;
   const CLAVE_SESION = 'tracker.sesion.v1'; // sesión abierta en este teléfono
   const main = document.getElementById('pantalla');
 
@@ -276,6 +277,55 @@
     }));
   }
 
+  // ---------------------------------------------------------------
+  // Progresión (Etapa 4): meta de hoy y avisos, usando progresion.js
+  // ---------------------------------------------------------------
+  function cargaHoy(e) {
+    const st = S.ej[e.id];
+    if (e.carga === 'mancuerna') return kilos(st.peso);
+    if (e.carga === 'banda') return bandasValidas(st.bandas);
+    return null;
+  }
+  // null = todavía no sabemos la última vez (cargando o sin conexión)
+  function progreso(e) {
+    const u = ultimas[e.id];
+    if (u === undefined || (u && u.sinConexion)) return null;
+    return P.calcular(e, u, cargaHoy(e), S.ej[e.id].n);
+  }
+  // Las series que aún no marcas (ni editaste) salen con la meta de hoy
+  function aplicarMeta(e, meta) {
+    const st = S.ej[e.id];
+    for (let i = 0; i < st.n; i++) {
+      const s = st.series[i];
+      if (s.guardada || s.editada) continue;
+      if (e.unidad === 's') s.seconds = meta[i]; else s.reps = meta[i];
+    }
+  }
+  function valoresHechos(e) {
+    const st = S.ej[e.id];
+    return st.series.slice(0, st.n).filter(s => s.done).map(s => (e.unidad === 's' ? s.seconds : s.reps));
+  }
+  // Cuadro ámbar de "sube de peso"
+  function cajaAviso(aviso, e) {
+    const etiquetaMeta = e.carga === 'banda' ? 'Meta con más bandas: ' : 'Meta con el peso nuevo: ';
+    return el('div', { class: 'aviso', role: 'status' },
+      el('strong', {}, aviso.texto),
+      aviso.metaNueva ? el('div', {}, etiquetaMeta + aviso.metaNueva.join(' - ') + (e.unidad === 's' ? ' s' : '')) : null,
+      el('div', { class: 'aviso-nota' }, 'Es sugerencia: tú decides si subes.'));
+  }
+
+  // Redibuja la tarjeta un poco después y solo cuando ya no estás escribiendo en ella
+  // (si se redibujara mientras escribes, se cerraría el teclado o se perdería tu toque)
+  const repintesPendientes = {};
+  function repintarLuego(id) {
+    clearTimeout(repintesPendientes[id]);
+    repintesPendientes[id] = setTimeout(() => {
+      const t = document.getElementById('ej-' + id);
+      if (t && t.contains(document.activeElement)) return repintarLuego(id);
+      repintarTarjeta(id);
+    }, 350);
+  }
+
   function textoUltimaVez(e) {
     const r = ultimas[e.id];
     if (r === undefined) return el('span', { class: 'gris' }, 'cargando…');
@@ -320,8 +370,9 @@
     if (!Number.isFinite(v) || v < 0) v = 0;
     if (v > 999) v = 999;
     if (e.unidad === 's') s.seconds = v; else s.reps = v;
+    s.editada = true; // ya no se cambia sola con la meta
     if (s.guardada) guardarSerie(e, i); else guardarLocal();
-    if (redibujar) repintarTarjeta(e.id);
+    if (redibujar) repintarTarjeta(e.id); else repintarLuego(e.id);
   }
 
   function cambiarPeso(e, texto) {
@@ -334,6 +385,28 @@
     st.peso = kilos(texto) === null ? '' : String(kilos(texto));
     error(e, null);
     reguardarEjercicio(e);
+  }
+
+  // Peso elegido de la lista (o "Otro…")
+  function elegirPeso(e, valor) {
+    const st = S.ej[e.id];
+    if (valor === 'otro') {
+      st.otro = true;
+      guardarLocal();
+      repintarTarjeta(e.id);
+      const campo = document.getElementById('otro-' + e.id);
+      if (campo) campo.focus();
+      return;
+    }
+    if (valor === '' && st.series.some(s => s.guardada && s.done)) {
+      repintarTarjeta(e.id);
+      return error(e, 'Ya marcaste series con este peso. Elige un peso, no lo dejes vacío.');
+    }
+    st.otro = false;
+    st.peso = valor;
+    errores[e.id] = null;
+    reguardarEjercicio(e);
+    repintarTarjeta(e.id);
   }
 
   function cambiarBandas(e, delta) {
@@ -389,18 +462,37 @@
     const rango = e.min === e.max ? String(e.min) : e.min + ' a ' + e.max;
     const faltan = faltanDe(e);
 
+    // Progresión: meta de hoy y avisos
+    const pr = progreso(e);
+    if (pr) { aplicarMeta(e, pr.meta); guardarLocal(); }
+    const avisoDeHoy = P.avisoHoy(e, valoresHechos(e), cargaHoy(e), st.n);
+    const avisoAnterior = !avisoDeHoy && pr && pr.avisoAnterior ? pr.avisoAnterior : null;
+    let textoMeta;
+    if (pr) textoMeta = pr.meta.join(' - ') + (e.unidad === 's' ? ' s' : '');
+    else if (ultimas[e.id] === undefined) textoMeta = el('span', { class: 'gris' }, 'cargando…');
+    else textoMeta = el('span', { class: 'gris' }, 'sin conexión');
+
     // Campo de peso / bandas según el tipo de carga
     let campoCarga = null;
     if (e.carga === 'mancuerna') {
+      const enLista = st.peso !== '' && P.filaPeso(st.peso);
+      const modoOtro = !!st.otro || (st.peso !== '' && !enLista);
+      const lado = st.peso === '' ? null : P.discosPorLado(st.peso);
       campoCarga = el('div', { class: 'peso' },
         el('label', { for: 'peso-' + e.id }, 'Peso por mancuerna (todas las series)'),
         el('div', { class: 'fila-peso' },
-          el('input', {
-            id: 'peso-' + e.id, type: 'text', inputmode: 'decimal', autocomplete: 'off',
-            value: st.peso, placeholder: '—',
-            onchange: ev => cambiarPeso(e, ev.target.value),
-          }),
-          el('span', { class: 'unidad' }, 'kg')));
+          el('select', { id: 'peso-' + e.id, onchange: ev => elegirPeso(e, ev.target.value) },
+            el('option', { value: '', selected: st.peso === '' && !modoOtro }, 'Elige…'),
+            R.PESOS.map(p => el('option', { value: String(p.kg), selected: !modoOtro && Number(st.peso) === p.kg }, p.kg + ' kg')),
+            el('option', { value: 'otro', selected: modoOtro }, 'Otro…')),
+          modoOtro ? el('input', {
+            id: 'otro-' + e.id, type: 'text', inputmode: 'decimal', autocomplete: 'off',
+            value: st.peso, placeholder: 'kg', 'aria-label': 'Otro peso en kg',
+            onchange: ev => { cambiarPeso(e, ev.target.value); repintarLuego(e.id); },
+          }) : null),
+        st.peso !== '' ? el('div', { class: 'lado' },
+          lado ? ['Por lado: ', el('strong', {}, lado)] : 'Por lado: arma tú los discos (peso fuera de la tabla)') : null,
+        pr && pr.cargaDistinta ? el('div', { class: 'gris' }, 'Peso distinto al anterior (antes ' + pr.cargaAnterior + ' kg)') : null);
     } else if (e.carga === 'banda') {
       campoCarga = el('div', { class: 'peso' },
         el('label', {}, 'Número de bandas (todas las series)'),
@@ -408,7 +500,8 @@
           el('button', { type: 'button', 'aria-label': 'Menos bandas', onclick: () => cambiarBandas(e, -1) }, '−'),
           el('input', { type: 'text', readonly: true, value: st.bandas ?? '—', 'aria-label': 'Bandas' }),
           el('button', { type: 'button', 'aria-label': 'Más bandas', onclick: () => cambiarBandas(e, +1) }, '+'),
-          el('span', { class: 'unidad' }, 'bandas')));
+          el('span', { class: 'unidad' }, 'bandas')),
+        pr && pr.cargaDistinta ? el('div', { class: 'gris' }, 'Bandas distintas a la anterior (antes ' + pr.cargaAnterior + ')') : null);
     } else if (e.carga === 'tiempo') {
       campoCarga = el('div', { class: 'peso' },
         el('label', { for: 'extra-' + e.id }, 'Peso o banda (opcional)'),
@@ -468,8 +561,11 @@
           el('div', { class: 'ej-musculo' }, e.musculo))),
       el('div', { class: 'dato' }, el('b', {}, 'Rango: '), rango + (e.unidad === 's' ? ' segundos' : ' reps')),
       el('div', { class: 'dato' }, el('b', {}, 'Última vez: '), textoUltimaVez(e)),
+      el('div', { class: 'dato meta' }, el('b', {}, 'Meta de hoy: '), textoMeta),
+      avisoAnterior ? cajaAviso(avisoAnterior, e) : null,
       campoCarga,
       el('div', { class: 'series' }, filas),
+      avisoDeHoy ? cajaAviso(avisoDeHoy, e) : null,
       botonesSerie,
       el('div', { class: 'faltan' + (faltan ? '' : ' completo') },
         faltan ? 'Te faltan ' + plural(faltan, 'serie', 'series') : '✓ Ejercicio completo'),

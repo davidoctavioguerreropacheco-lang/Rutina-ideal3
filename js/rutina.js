@@ -131,6 +131,26 @@ const DIAS = {
 const ORDEN_DIAS = ['miercoles', 'jueves', 'sabado', 'domingo'];
 
 // ---------------------------------------------------------------------
+// Pesos posibles por mancuerna y discos por lado (tabla del documento)
+// Inventario: 8 discos de 3 kg, 4 de 2.5 kg y 4 de 1.25 kg.
+// Por lado máximo: dos de 3, uno de 2.5 y uno de 1.25.
+// La barra (~300 g) no se cuenta.
+// ---------------------------------------------------------------------
+const PESOS = [
+  { kg: 2.5,  lado: '1.25' },
+  { kg: 5,    lado: '2.5' },
+  { kg: 6,    lado: '3' },
+  { kg: 7.5,  lado: '2.5 + 1.25' },
+  { kg: 8.5,  lado: '3 + 1.25' },
+  { kg: 11,   lado: '3 + 2.5' },
+  { kg: 12,   lado: '3 + 3' },
+  { kg: 13.5, lado: '3 + 2.5 + 1.25' },
+  { kg: 14.5, lado: '3 + 3 + 1.25' },
+  { kg: 17,   lado: '3 + 3 + 2.5' },
+  { kg: 19.5, lado: '3 + 3 + 2.5 + 1.25' },
+];
+
+// ---------------------------------------------------------------------
 // 3) Ayudantes para que el resto de la app no tenga que buscar a mano
 // ---------------------------------------------------------------------
 
@@ -179,6 +199,6 @@ function congelar(obj) {
 }
 
 window.RUTINA = congelar({
-  EJERCICIOS, DIAS, ORDEN_DIAS,
+  EJERCICIOS, DIAS, ORDEN_DIAS, PESOS,
   ejerciciosDeDia, seriesDelDia, diaDeHoy,
 });

@@ -109,7 +109,20 @@ h2 { font-size: 20px; margin: 24px 0 8px; color: var(--texto2); font-weight: 600
   background: var(--fondo); padding: 6px 12px;
 }
 .peso input { width: 120px; font-size: 28px; font-weight: 700; text-align: center; }
-.peso select { color-scheme: dark; }
+.peso select { color-scheme: dark; font-size: 22px; font-weight: 700; min-width: 132px; }
+.peso .lado { margin-top: 8px; font-size: 17px; }
+.peso .lado strong { font-size: 20px; }
+.peso .gris { margin-top: 4px; font-size: 16px; }
+.dato.meta { font-size: 20px; font-weight: 700; }
+.dato.meta b { font-size: 17px; }
+
+/* ---------- Cuadro ámbar: toca subir de peso ---------- */
+.aviso {
+  margin-top: 12px; padding: 12px 14px; border-radius: 12px;
+  border: 2px solid var(--ambar); background: rgba(245, 158, 11, .12);
+}
+.aviso strong { color: var(--ambar); display: block; margin-bottom: 4px; }
+.aviso-nota { color: var(--texto2); font-size: 15px; margin-top: 4px; }
 .peso .unidad { color: var(--texto2); }
 
 .series { margin-top: 14px; }
