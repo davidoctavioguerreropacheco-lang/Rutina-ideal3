@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prueba de rutina</title>
+  <style>
+    :root {
+      --fondo: #0F1115; --tarjeta: #1A1D24; --texto: #F2F4F8; --texto2: #9AA3B2;
+      --azul: #3B82F6; --verde: #22C55E; --rojo: #EF4444;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 16px; background: var(--fondo); color: var(--texto);
+      font: 18px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    main { max-width: 430px; margin: 0 auto; }
+    h1 { font-size: 24px; margin: 8px 0 4px; }
+    h2 { font-size: 20px; margin: 0 0 2px; }
+    p { margin: 0 0 12px; color: var(--texto2); }
+    .tarjeta { background: var(--tarjeta); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+    .hoy { outline: 2px solid var(--azul); }
+    .fila { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid #2a2e38; font-size: 16px; }
+    .fila:last-child { border-bottom: 0; }
+    .rs { color: var(--texto2); min-width: 34px; }
+    .info { flex: 1; }
+    .info small { display: block; color: var(--texto2); }
+    .sxr { white-space: nowrap; text-align: right; }
+    .ok { color: var(--verde); } .error { color: var(--rojo); }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Rutina fija</h1>
+  <p id="estado">Cargando…</p>
+  <div id="dias"></div>
+</main>
+
+<script src="js/rutina.js"></script>
+<script>
+  const R = window.RUTINA;
+  const estado = document.getElementById('estado');
+  const contenedor = document.getElementById('dias');
+  const CARGA = { mancuerna: 'Mancuerna', banda: 'Banda', corporal: 'Peso corporal', tiempo: 'Tiempo' };
+
+  function el(tag, clase, texto) {
+    const n = document.createElement(tag);
+    if (clase) n.className = clase;
+    if (texto !== undefined) n.textContent = texto;
+    return n;
+  }
+
+  if (!R) {
+    estado.textContent = '✘ No cargó js/rutina.js';
+    estado.className = 'error';
+  } else {
+    const hoy = R.diaDeHoy();
+    estado.textContent = hoy
+      ? 'Hoy toca: ' + R.DIAS[hoy].nombre + ' (marcado en azul)'
+      : 'Hoy es día de descanso';
+
+    for (const diaId of R.ORDEN_DIAS) {
+      const dia = R.DIAS[diaId];
+      const tarjeta = el('div', 'tarjeta' + (diaId === hoy ? ' hoy' : ''));
+      tarjeta.appendChild(el('h2', '', dia.nombre + ': ' + dia.titulo));
+      tarjeta.appendChild(el('p', '', R.seriesDelDia(diaId) + ' series por defecto'));
+
+      for (const e of R.ejerciciosDeDia(diaId)) {
+        const fila = el('div', 'fila');
+        fila.appendChild(el('span', 'rs', e.ronda + e.slot));
+        const info = el('div', 'info', e.nombre);
+        info.appendChild(el('small', '', e.musculo + ' · ' + CARGA[e.carga] + ' · id: ' + e.id));
+        fila.appendChild(info);
+        const series = e.seriesMax > e.series ? e.series + '-' + e.seriesMax : e.series;
+        const rango = e.min === e.max ? e.min : e.min + '-' + e.max;
+        fila.appendChild(el('span', 'sxr', series + ' x ' + rango + (e.unidad === 's' ? ' s' : '')));
+        tarjeta.appendChild(fila);
+      }
+      contenedor.appendChild(tarjeta);
+    }
+  }
+</script>
+</body>
+</html>
