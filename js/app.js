@@ -246,10 +246,19 @@
     if (faltan > 0 && !confirm('Te faltan ' + plural(faltan, 'serie', 'series') + '. ¿Terminar de todos modos?')) return;
     S.sesion.terminada = true;
     DB.encolar('sessions', filaSesion());
+
+    // El resumen se arma con lo que ya está en el teléfono: sale aunque no haya señal
+    const datos = { sesion: { ...S.sesion }, hoy: {}, previa: {}, desde: 'hoy' };
+    for (const e of ejerciciosHoy()) {
+      const st = S.ej[e.id];
+      datos.hoy[e.id] = st.series.slice(0, st.n)
+        .map((x, i) => (x.done ? filaSerie(e, i) : null)).filter(Boolean);
+      const u = ultimas[e.id];
+      datos.previa[e.id] = u && u.sinConexion ? undefined : u;
+    }
     DB.borrarLocal(CLAVE_SESION);
     S = null;
-    irA('hoy');
-    toast('Sesión terminada: ' + hechas + ' de ' + total + ' series. El resumen llega en la Etapa 5.');
+    irA('resumen', datos);
   }
 
   // "Última vez" de cada ejercicio del día
@@ -702,21 +711,14 @@
   // ---------------------------------------------------------------
   // Pantallas que llegan en la Etapa 5
   // ---------------------------------------------------------------
-  function pantallaPendiente(titulo) {
-    main.replaceChildren(
-      el('h1', {}, titulo),
-      el('div', { class: 'sync' }, ''),
-      el('div', { class: 'tarjeta mt' }, el('span', { class: 'gris' }, 'Esta pantalla llega en la Etapa 5.')));
-    pintarSync();
-  }
-
   // ---------------------------------------------------------------
   // Navegación
   // ---------------------------------------------------------------
   let pantallaActual = null;
-  function irA(p) {
+  // Comparar, Historial, Ajustes y Resumen viven en js/pantallas.js
+  function irA(p, datos) {
     pantallaActual = p;
-    const pestaña = p === 'sesion' ? 'hoy' : p;
+    const pestaña = p === 'sesion' ? 'hoy' : p === 'resumen' ? (datos && datos.desde) || 'hoy' : p;
     document.querySelectorAll('.nav button').forEach(b => {
       const activo = b.dataset.ir === pestaña;
       b.classList.toggle('activo', activo);
@@ -724,11 +726,12 @@
     });
     if (p === 'hoy') pantallaHoy();
     else if (p === 'sesion') pantallaSesion();
-    else if (p === 'comparar') pantallaPendiente('Comparar');
-    else if (p === 'historial') pantallaPendiente('Historial');
-    else if (p === 'ajustes') pantallaPendiente('Ajustes');
+    else window.PANTALLAS[p](datos);
     window.scrollTo(0, 0);
   }
+
+  // Lo que js/pantallas.js usa de aquí
+  window.APP = { el, main, fechaBonita, hoyISO, plural, toast, pintarSync, irA };
 
   document.querySelectorAll('.nav button').forEach(b => b.addEventListener('click', () => {
     // "Hoy" con una sesión abierta te regresa a la sesión

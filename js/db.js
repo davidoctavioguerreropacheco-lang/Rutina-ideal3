@@ -184,17 +184,63 @@
     const { data, error } = await q;
     if (error) throw error;
 
-    // Agrupar por sesión y quedarnos con la más reciente
+    const r = agruparPorSesion(data)[0] || null;
+    escribirLocal(CLAVE_ULTIMA + exerciseId, r);
+    return r;
+  }
+
+  // Junta las series por sesión: [{ session_id, fecha, dia, creada_en, series: [...] }]
+  // La sesión más reciente queda primero; las series en orden 1, 2, 3, 4.
+  function agruparPorSesion(filas) {
     const porSesion = {};
-    for (const f of data) {
+    for (const f of filas) {
       const s = porSesion[f.session_id] ||= { ...f.sessions, session_id: f.session_id, series: [] };
       s.series.push({ set_number: f.set_number, reps: f.reps, seconds: f.seconds, weight_kg: f.weight_kg, bands: f.bands });
     }
     const lista = Object.values(porSesion).sort(masReciente);
-    const r = lista[0] || null;
-    if (r) r.series.sort((a, b) => a.set_number - b.set_number);
-    escribirLocal(CLAVE_ULTIMA + exerciseId, r);
-    return r;
+    lista.forEach(x => x.series.sort((a, b) => a.set_number - b.set_number));
+    return lista;
+  }
+
+  // Supabase regresa máximo 1000 filas por consulta: esto pide página por página
+  async function todas(armarConsulta) {
+    const PASO = 1000;
+    let desde = 0, resultado = [];
+    for (;;) {
+      const { data, error } = await armarConsulta().range(desde, desde + PASO - 1);
+      if (error) throw error;
+      resultado = resultado.concat(data);
+      if (data.length < PASO) return resultado;
+      desde += PASO;
+    }
+  }
+
+  // Etapa 5: todas las sesiones en que hiciste un ejercicio (la más reciente primero)
+  async function historialEjercicio(exerciseId) {
+    await alDia();
+    const filas = await todas(() => exigir().from('set_logs')
+      .select('id, session_id, set_number, reps, seconds, weight_kg, bands, sessions!inner(fecha, dia, creada_en, terminada)')
+      .eq('exercise_id', exerciseId).eq('done', true).order('id'));
+    return agruparPorSesion(filas);
+  }
+
+  // Etapa 5: lista de sesiones (la más reciente primero)
+  async function sesiones() {
+    await alDia();
+    return todas(() => exigir().from('sessions')
+      .select('id, fecha, dia, terminada, creada_en')
+      .order('fecha', { ascending: false }).order('creada_en', { ascending: false }));
+  }
+
+  // Etapa 5: TODO lo que hay en la base, para el respaldo
+  async function respaldo() {
+    await alDia();
+    const c = exigir();
+    const [ses, series] = await Promise.all([
+      todas(() => c.from('sessions').select('*').order('creada_en')),
+      todas(() => c.from('set_logs').select('*').order('id')),
+    ]);
+    return { sessions: ses, set_logs: series };
   }
   function ultimaVezGuardada(exerciseId) { return leerLocal(CLAVE_ULTIMA + exerciseId, undefined); }
 
@@ -253,6 +299,7 @@
     alCambiar: fn => { oyentes.push(fn); fn(estado()); },
     pendientesDeSesion, estaPendiente,
     ultimaVez, ultimaVezGuardada, sesionAbierta, ultimaTerminada, sesionPorFechaDia, seriesDeSesion,
+    historialEjercicio, sesiones, respaldo,
     leerLocal, escribirLocal, borrarLocal,
   };
 })();

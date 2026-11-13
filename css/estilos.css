@@ -179,3 +179,49 @@ h2 { font-size: 20px; margin: 24px 0 8px; color: var(--texto2); font-weight: 600
   background: #2A2E38; color: var(--texto); padding: 14px 16px; border-radius: 12px;
   box-shadow: 0 6px 24px rgba(0,0,0,.4);
 }
+
+/* ===================================================================
+   Etapa 5: Resumen, Comparar, Historial y Ajustes
+   =================================================================== */
+.verde { color: var(--verde); }
+.rojo { color: var(--rojo); }
+.ambar { color: var(--ambar); font-weight: 600; margin-top: 4px; }
+.campo select, .selector {
+  width: 100%; min-height: 52px; padding: 8px 12px;
+  background: var(--tarjeta); border: 2px solid var(--borde); border-radius: 12px;
+  color-scheme: dark; font-size: 17px;
+}
+
+/* Resumen */
+.resumen-total .grande { font-size: 26px; font-weight: 700; }
+.res-fila { padding: 12px 0; border-top: 1px solid var(--borde); }
+.res-fila:first-child { border-top: 0; padding-top: 0; }
+.res-nombre { font-weight: 700; }
+.res-reps { font-size: 20px; font-weight: 700; margin-top: 2px; }
+.aviso.chico { margin-top: 8px; padding: 8px 12px; font-size: 16px; }
+.aviso.chico strong { margin-bottom: 2px; }
+
+/* Tabla de Comparar */
+.tabla-caja { padding: 8px 12px; overflow-x: auto; }
+.tabla { width: 100%; border-collapse: collapse; font-size: 16px; }
+.tabla th { text-align: left; color: var(--texto2); font-weight: 500; padding: 8px 4px; font-size: 14px; }
+.tabla td { padding: 10px 4px; border-top: 1px solid var(--borde); vertical-align: top; }
+.tabla td.reps { font-weight: 700; font-size: 17px; white-space: nowrap; }
+.tabla .der { text-align: right; white-space: nowrap; }
+.tabla td.nowrap { white-space: nowrap; }
+.tabla td small { display: block; color: var(--texto2); font-size: 13px; }
+
+/* Listas de Historial y Ajustes */
+.fila-sesion {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  width: 100%; min-height: 52px; padding: 8px 0;
+  background: transparent; border: 0; border-top: 1px solid var(--borde);
+  text-align: left; font-size: 17px;
+}
+.fila-sesion:first-child { border-top: 0; }
+.fila-sesion .abierta { color: var(--azul); font-weight: 600; }
+.linea-lista {
+  display: flex; justify-content: space-between; gap: 12px;
+  padding: 10px 0; border-top: 1px solid var(--borde);
+}
+.linea-lista:first-child { border-top: 0; }

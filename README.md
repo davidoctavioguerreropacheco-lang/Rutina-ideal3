@@ -13,12 +13,13 @@ Página web para celular que guarda cada serie de la rutina en Supabase.
 - `css/estilos.css` — colores y tamaños (oscuro, una columna, botones de 48 px o más).
 - `js/progresion.js` — regla de progresión: meta de hoy, aviso de subir de peso, siguiente peso y discos por lado.
 - `js/db.js` — conexión a Supabase y guardado seguro con cola (Guardado / Pendiente).
-- `js/app.js` — las pantallas.
+- `js/app.js` — pantallas Hoy y Sesión.
+- `js/pantallas.js` — Resumen de sesión, Comparar, Historial y Ajustes (respaldo en .csv).
 
 ## Avance
 - [x] Etapa 1: base de datos (probada por David en Chrome y Edge, 13 nov 2026)
 - [x] Etapa 2: rutina fija (revisada por David)
 - [x] Etapa 3: sesión del día (probada por David)
-- [x] Etapa 4: progresión (pendiente de prueba de David)
-- [ ] Etapa 5: comparar, historial, resumen y ajustes
+- [x] Etapa 4: progresión (probada por David)
+- [x] Etapa 5: comparar, historial, resumen y ajustes (pendiente de prueba de David)
 - [ ] Etapa 6: publicar en GitHub Pages
