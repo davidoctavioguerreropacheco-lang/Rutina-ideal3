@@ -9,11 +9,15 @@ Página web para celular que guarda cada serie de la rutina en Supabase.
 - `prueba-db.html` — página para probar guardar, corregir y leer una serie.
 - `js/rutina.js` — la rutina fija (4 días, ejercicios, series, rangos, tipo de carga). Se cambia aquí, no en la base.
 - `prueba-rutina.html` — muestra la rutina para compararla contra el documento.
+- `index.html` — la app. Pantallas Hoy y Sesión del día.
+- `css/estilos.css` — colores y tamaños (oscuro, una columna, botones de 48 px o más).
+- `js/db.js` — conexión a Supabase y guardado seguro con cola (Guardado / Pendiente).
+- `js/app.js` — las pantallas.
 
 ## Avance
 - [x] Etapa 1: base de datos (probada por David en Chrome y Edge, 13 nov 2026)
-- [x] Etapa 2: rutina fija (pendiente de revisión de David)
-- [ ] Etapa 3: sesión del día
+- [x] Etapa 2: rutina fija (revisada por David)
+- [x] Etapa 3: sesión del día (pendiente de prueba de David)
 - [ ] Etapa 4: progresión
 - [ ] Etapa 5: comparar, historial, resumen y ajustes
 - [ ] Etapa 6: publicar en GitHub Pages
