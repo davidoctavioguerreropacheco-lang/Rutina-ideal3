@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prueba de base de datos</title>
+  <style>
+    :root {
+      --fondo: #0F1115; --tarjeta: #1A1D24; --texto: #F2F4F8; --texto2: #9AA3B2;
+      --azul: #3B82F6; --verde: #22C55E; --ambar: #F59E0B; --rojo: #EF4444;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 16px; background: var(--fondo); color: var(--texto);
+      font: 18px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    main { max-width: 430px; margin: 0 auto; }
+    h1 { font-size: 24px; margin: 8px 0 4px; }
+    p.sub { color: var(--texto2); margin: 0 0 16px; }
+    .tarjeta { background: var(--tarjeta); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+    button {
+      display: block; width: 100%; min-height: 48px; margin: 0 0 12px;
+      border: 0; border-radius: 10px; background: var(--azul); color: #fff;
+      font: inherit; font-weight: 600; cursor: pointer;
+    }
+    button:disabled { opacity: .5; }
+    button.sec { background: transparent; border: 2px solid var(--azul); color: var(--texto); }
+    ul#log { list-style: none; padding: 0; margin: 0; }
+    #log li { padding: 6px 0; border-bottom: 1px solid #2a2e38; }
+    .ok { color: var(--verde); } .error { color: var(--rojo); } .aviso { color: var(--ambar); }
+    table { width: 100%; border-collapse: collapse; font-size: 16px; }
+    th, td { text-align: left; padding: 6px 4px; border-bottom: 1px solid #2a2e38; }
+    th { color: var(--texto2); font-weight: 500; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Prueba de base de datos</h1>
+  <p class="sub">Etapa 1: guardar, corregir y leer una serie de prueba.</p>
+
+  <div class="tarjeta">
+    <button id="btnPrueba">Correr prueba completa</button>
+    <button id="btnLeer" class="sec">Solo leer la serie de prueba</button>
+  </div>
+
+  <div class="tarjeta">
+    <ul id="log"></ul>
+  </div>
+
+  <div class="tarjeta" id="cajaTabla" hidden>
+    <table>
+      <thead><tr><th>Ejercicio</th><th>Serie</th><th>Reps</th><th>Kg</th><th>Hecha</th></tr></thead>
+      <tbody id="filas"></tbody>
+    </table>
+  </div>
+</main>
+
+<!-- Librería oficial de Supabase (versión fija) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
+<!-- Tus 2 datos de conexión -->
+<script src="js/config.js"></script>
+<script>
+  // Sesión de prueba con id FIJO: correr la prueba 10 veces no crea 10 sesiones.
+  const SESION_PRUEBA = '00000000-0000-4000-8000-000000000001';
+  const EJERCICIO_PRUEBA = 'prueba_etapa1';
+
+  const log = document.getElementById('log');
+  function anota(texto, tipo) {
+    const li = document.createElement('li');
+    li.textContent = texto;
+    if (tipo) li.className = tipo;
+    log.appendChild(li);
+  }
+
+  // Fecha de hoy en hora de Acapulco / Ciudad de México (formato AAAA-MM-DD)
+  function hoyMexico() {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City' }).format(new Date());
+  }
+
+  // Revisa que la clave pegada sea la pública y no la de administrador
+  function revisarClave(clave) {
+    if (!clave || clave.startsWith('PEGA_AQUI')) return 'Falta pegar la clave en js/config.js';
+    if (clave.startsWith('sb_secret_')) return 'Pegaste la clave SECRETA. Bórrala y usa la publishable.';
+    if (clave.startsWith('eyJ')) {
+      try {
+        const datos = JSON.parse(atob(clave.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+        if (datos.role !== 'anon') return 'Esa clave es "' + datos.role + '". Usa la anon (pública).';
+      } catch (e) { return 'La clave no se pudo leer. Cópiala otra vez.'; }
+    }
+    return null;
+  }
+
+  let db = null;
+  function conectar() {
+    const { SUPABASE_URL, SUPABASE_KEY } = window.APP_CONFIG || {};
+    if (!SUPABASE_URL || SUPABASE_URL.startsWith('PEGA_AQUI')) { anota('✘ Falta pegar la URL en js/config.js', 'error'); return false; }
+    const problema = revisarClave(SUPABASE_KEY);
+    if (problema) { anota('✘ ' + problema, 'error'); return false; }
+    if (!window.supabase) { anota('✘ No cargó la librería de Supabase (¿hay internet?)', 'error'); return false; }
+    db = db || window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    return true;
+  }
+
+  // Guardar una serie = crear o actualizar la fila de (sesión + ejercicio + serie)
+  async function guardarSerie(serie) {
+    return db.from('set_logs')
+      .upsert(serie, { onConflict: 'session_id,exercise_id,set_number' })
+      .select();
+  }
+
+  async function leerSeriesPrueba() {
+    const { data, error } = await db.from('set_logs')
+      .select('exercise_id, set_number, reps, weight_kg, done, updated_at')
+      .eq('exercise_id', EJERCICIO_PRUEBA)
+      .order('set_number');
+    if (error) { anota('✘ Error al leer: ' + error.message, 'error'); return null; }
+    const tbody = document.getElementById('filas');
+    tbody.innerHTML = '';
+    for (const f of data) {
+      const tr = document.createElement('tr');
+      for (const v of [f.exercise_id, f.set_number, f.reps, f.weight_kg, f.done ? 'sí' : 'no']) {
+        const td = document.createElement('td'); td.textContent = v; tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    }
+    document.getElementById('cajaTabla').hidden = false;
+    return data;
+  }
+
+  async function correrPrueba() {
+    log.innerHTML = '';
+    if (!conectar()) return;
+
+    // Paso 1: crear (o reusar) la sesión de prueba
+    const { error: e1 } = await db.from('sessions')
+      .upsert({ id: SESION_PRUEBA, fecha: hoyMexico(), dia: 'miercoles' });
+    if (e1) { anota('✘ Paso 1, crear sesión: ' + e1.message, 'error'); return; }
+    anota('✔ Paso 1: sesión de prueba lista (' + hoyMexico() + ')', 'ok');
+
+    // Paso 2: guardar la serie 1 con 9 reps y 7.5 kg
+    const { error: e2 } = await guardarSerie({
+      session_id: SESION_PRUEBA, exercise_id: EJERCICIO_PRUEBA,
+      set_number: 1, reps: 9, weight_kg: 7.5, done: true,
+    });
+    if (e2) { anota('✘ Paso 2, guardar serie: ' + e2.message, 'error'); return; }
+    anota('✔ Paso 2: serie 1 guardada (9 reps, 7.5 kg)', 'ok');
+
+    // Paso 3: corregir la MISMA serie a 10 reps (no debe duplicar)
+    const { error: e3 } = await guardarSerie({
+      session_id: SESION_PRUEBA, exercise_id: EJERCICIO_PRUEBA,
+      set_number: 1, reps: 10, weight_kg: 7.5, done: true,
+    });
+    if (e3) { anota('✘ Paso 3, corregir serie: ' + e3.message, 'error'); return; }
+    anota('✔ Paso 3: serie 1 corregida a 10 reps', 'ok');
+
+    // Paso 4: leer de la base y comprobar
+    const filas = await leerSeriesPrueba();
+    if (!filas) return;
+    if (filas.length === 1 && filas[0].reps === 10) {
+      anota('✔ Paso 4: hay 1 sola fila con 10 reps. ¡No se duplicó!', 'ok');
+    } else {
+      anota('✘ Paso 4: se esperaba 1 fila con 10 reps y hay ' + filas.length, 'error');
+    }
+  }
+
+  async function soloLeer() {
+    log.innerHTML = '';
+    if (!conectar()) return;
+    const filas = await leerSeriesPrueba();
+    if (!filas) return;
+    if (filas.length) anota('✔ Leí ' + filas.length + ' fila(s) desde la base en línea', 'ok');
+    else anota('No hay serie de prueba todavía. Corre la prueba completa.', 'aviso');
+  }
+
+  document.getElementById('btnPrueba').addEventListener('click', correrPrueba);
+  document.getElementById('btnLeer').addEventListener('click', soloLeer);
+</script>
+</body>
+</html>
