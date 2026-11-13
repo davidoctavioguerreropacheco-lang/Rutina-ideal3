@@ -8,6 +8,6 @@
 // NUNCA pongas aquí la "Secret key" (sb_secret_) ni la "service_role".
 // =====================================================================
 window.APP_CONFIG = {
-  SUPABASE_URL: 'PEGA_AQUI_TU_URL',        // ej. https://abcdxyz.supabase.co
-  SUPABASE_KEY: 'PEGA_AQUI_TU_CLAVE_PUBLICA',
+  SUPABASE_URL: 'https://cmihsrtjlavjruirayzy.supabase.co',
+  SUPABASE_KEY: 'sb_publishable_jzJv9TRZzJDAaHMBFvn8CA_hnQ_BLlf',
 };
