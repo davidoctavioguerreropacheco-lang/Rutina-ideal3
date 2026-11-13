@@ -9,7 +9,7 @@ Página web para celular que guarda cada serie de la rutina en Supabase.
 - `prueba-db.html` — página para probar guardar, corregir y leer una serie.
 
 ## Avance
-- [x] Etapa 1: base de datos (pendiente de que David la pruebe con su proyecto)
+- [x] Etapa 1: base de datos (probada por David en Chrome y Edge, 13 nov 2026)
 - [ ] Etapa 2: rutina fija
 - [ ] Etapa 3: sesión del día
 - [ ] Etapa 4: progresión
