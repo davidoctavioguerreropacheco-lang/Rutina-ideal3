@@ -21,4 +21,4 @@ Página web para celular que guarda cada serie de la rutina en Supabase.
 - [x] Etapa 3: sesión del día (probada por David)
 - [x] Etapa 4: progresión (probada por David)
 - [x] Etapa 5: comparar, historial, resumen y ajustes (probada por David)
-- [ ] Etapa 6: publicar en GitHub Pages (archivos listos; falta activar Pages)
+- [x] Etapa 6: publicada en GitHub Pages y probada por David desde su celular
